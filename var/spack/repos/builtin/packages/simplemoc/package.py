@@ -22,29 +22,47 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 ##############################################################################
+
 from spack import *
 
 
-class Gbenchmark(CMakePackage):
-    """A microbenchmark support library"""
+class Simplemoc(MakefilePackage):
+    """The purpose of this mini-app is to demonstrate the performance
+        characterterics and viability of the Method of Characteristics (MOC)
+        for 3D neutron transport calculations in the context of full scale
+        light water reactor simulation."""
 
-    homepage = "https://github.com/google/benchmark"
-    url = "https://github.com/google/benchmark/archive/v1.0.0.tar.gz"
+    homepage = "https://github.com/ANL-CESAR/SimpleMOC/"
+    url = "https://github.com/ANL-CESAR/SimpleMOC/archive/master.tar.gz"
 
-    version('1.1.0', '8c539bbe2a212618fa87b6c38fba087100b6e4ae')
-    version('1.0.0', '4f778985dce02d2e63262e6f388a24b595254a93')
+    version('1.0', 'd8827221a4ae76e9766a32e16d143e60')
 
-    def build_type(self):
-        return "Release"
+    tags = ['proxy-app']
 
-    def patch(self):
-        filter_file(
-            r'add_cxx_compiler_flag..fstrict.aliasing.',
-            r'##### add_cxx_compiler_flag(-fstrict-aliasing)',
-            'CMakeLists.txt'
-        )
-        filter_file(
-            r'add_cxx_compiler_flag..Werror',
-            r'##### add_cxx_compiler_flag(-Werror',
-            'CMakeLists.txt'
-        )
+    variant('mpi', default=True, description='Build with MPI support')
+
+    depends_on('mpi', when='+mpi')
+
+    build_directory = 'src'
+
+    @property
+    def build_targets(self):
+
+        targets = []
+
+        cflags = '-std=gnu99'
+        ldflags = '-lm'
+
+        if self.compiler.name == 'gcc' or self.compiler.name == 'intel':
+            cflags += ' ' + self.compiler.openmp_flag
+        if '+mpi' in self.spec:
+            targets.append('CC={0}'.format(self.spec['mpi'].mpicc))
+
+        targets.append('CFLAGS={0}'.format(cflags))
+        targets.append('LDFLAGS={0}'.format(ldflags))
+
+        return targets
+
+    def install(self, spec, prefix):
+        mkdir(prefix.bin)
+        install('src/SimpleMOC', prefix.bin)
